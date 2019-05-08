@@ -58,7 +58,7 @@ class Discriminator(nn.Module):
         self.sequential = nn.Sequential(*modules)
 
     def forward(self, input):
-        return self.sequential(input).squeeze(-1).squeeze(-1)
+        return self.sequential(input).squeeze(-1).squeeze(-1).squeeze(-1)
 
 
 class Generator(nn.Module):

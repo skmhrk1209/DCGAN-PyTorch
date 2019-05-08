@@ -18,25 +18,12 @@ parser.add_argument("--discriminator", type=str, default="")
 parser.add_argument("--generator", type=str, default="")
 args = parser.parse_args()
 
-
-'''
-dataset = dataset.LSUN(
+dataset = datasets.LSUN(
     root="lsun",
     classes=['bedroom_train'],
     transform=transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-    ])
-)
-'''
-
-dataset = datasets.MNIST(
-    root="mnist",
-    download=True,
-    transform=transforms.Compose([
-        transforms.Resize((32, 32)),
-        transforms.ToTensor(),
-        transforms.Normalize((0.5,), (0.5,)),
+        transforms.Normalize((0.5,) * 3, (0.5,) * 3),
     ])
 )
 
@@ -53,7 +40,7 @@ discriminator = model.Discriminator(
         Param(filters=64, kernel_size=4),
         Param(filters=128, kernel_size=4),
     ],
-    in_channels=1
+    in_channels=3
 )
 print(discriminator)
 
@@ -67,7 +54,7 @@ generator = model.Generator(
         Param(filters=32, kernel_size=4),
         Param(filters=1, kernel_size=4),
     ],
-    out_channels=1
+    out_channels=3
 )
 print(generator)
 
