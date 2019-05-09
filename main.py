@@ -11,19 +11,20 @@ import model
 from param import Param
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--batch_size", type=int, default=64)
-parser.add_argument("--num_epochs", type=int, default=10)
+parser.add_argument("--batch_size", type=int, default=128)
+parser.add_argument("--num_epochs", type=int, default=20)
 parser.add_argument("--latent_dims", type=int, default=128)
 parser.add_argument("--discriminator", type=str, default="")
 parser.add_argument("--generator", type=str, default="")
 args = parser.parse_args()
 
-dataset = datasets.LSUN(
-    root="lsun",
-    classes=['bedroom_train'],
+dataset = datasets.MNIST(
+    root="mnist",
+    download=True,
     transform=transforms.Compose([
+        transforms.Resize((32, 32)),
         transforms.ToTensor(),
-        transforms.Normalize((0.5,) * 3, (0.5,) * 3),
+        transforms.Normalize((0.5,), (0.5,)),
     ])
 )
 
@@ -40,7 +41,7 @@ discriminator = model.Discriminator(
         Param(filters=64, kernel_size=4),
         Param(filters=128, kernel_size=4),
     ],
-    in_channels=3
+    in_channels=1
 )
 print(discriminator)
 
@@ -50,11 +51,11 @@ if args.discriminator:
 generator = model.Generator(
     latent_dims=args.latent_dims,
     deconv_params=[
+        Param(filters=128, kernel_size=4),
         Param(filters=64, kernel_size=4),
         Param(filters=32, kernel_size=4),
-        Param(filters=1, kernel_size=4),
     ],
-    out_channels=3
+    out_channels=1
 )
 print(generator)
 
@@ -72,22 +73,18 @@ generator_optimizer = optim.Adam(
     betas=(0.5, 0.999)
 )
 
-criterion = nn.BCELoss()
-
 for epoch in range(args.num_epochs):
     for step, (reals, _) in enumerate(data_loader):
 
         discriminator.zero_grad()
 
         real_logits = discriminator(reals)
-        real_labels = torch.ones((reals.size(0),))
-        real_loss = criterion(real_logits, real_labels)
+        real_loss = nn.functional.softplus(-real_logits).mean()
 
         latents = torch.randn(reals.size(0), args.latent_dims)
         fakes = generator(latents)
         fake_logits = discriminator(fakes.detach())
-        fake_labels = torch.zeros((fakes.size(0),))
-        fake_loss = criterion(fake_logits, fake_labels)
+        fake_loss = nn.functional.softplus(fake_logits).mean()
 
         discriminator_loss = real_loss + fake_loss
         discriminator_loss.backward()
@@ -96,8 +93,7 @@ for epoch in range(args.num_epochs):
         generator.zero_grad()
 
         fake_logits = discriminator(fakes)
-        fake_labels = torch.ones((fakes.size(0),))
-        fake_loss = criterion(fake_logits, fake_labels)
+        fake_loss = nn.functional.softplus(-fake_logits).mean()
 
         generator_loss = fake_loss
         generator_loss.backward()
